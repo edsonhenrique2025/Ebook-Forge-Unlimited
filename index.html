@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+
+<html lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EbookForge Unlimited</title>
+<!-- Bibliotecas CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;family=Newsreader:opsz,ital,wght@6..72,0,400;6..72,1,400&amp;display=swap" rel="stylesheet"/>
+<style>
+        :root {
+            --primary: #3F51B5;
+            --primary-light: #e8eaf6;
+            --text-dark: #1a1a1a;
+            --text-light: #f5f5f5;
+            --bg-light: #ffffff;
+            --bg-dark: #121212;
+            --sidebar-width: 280px;
+            --toolbar-height: 64px;
+            --transition: all 0.3s ease;
+        }
+
+        body.dark-mode {
+            --bg-light: #121212;
+            --text-dark: #f5f5f5;
+            --primary-light: #1a1c2e;
+            background-color: var(--bg-dark);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #f8f9fa;
+            color: var(--text-dark);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* --- TELA INICIAL --- */
+        #setup-screen {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal {
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal h2 { margin-bottom: 1.5rem; font-family: 'Newsreader', serif; font-size: 2rem; }
+        
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        /* --- LAYOUT PRINCIPAL --- */
+        #app-shell {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            grid-template-rows: var(--toolbar-height) 1fr;
+            height: 100vh;
+        }
+
+        header {
+            grid-column: 1 / -1;
+            background: var(--bg-light);
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            z-index: 100;
+        }
+
+        .logo { font-weight: 800; color: var(--primary); font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+
+        aside {
+            background: var(--bg-light);
+            border-right: 1px solid #eee;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .page-item {
+            padding: 12px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-item:hover { background: var(--primary-light); }
+        .page-item.active { background: var(--primary); color: white; }
+
+        main {
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f2f5;
+        }
+
+        /* --- EDITOR --- */
+        #editor-container {
+            background: white;
+            width: 100%;
+            max-width: 800px;
+            min-height: 1000px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 4rem;
+            position: relative;
+        }
+
+        .rich-editor {
+            outline: none;
+            font-family: 'Newsreader', serif;
+            font-size: 1.2rem;
+            line-height: 1.6;
+            min-height: 800px;
+        }
+
+        .editor-toolbar {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 5px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .tool-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .tool-btn:hover { background: #f0f0f0; }
+
+        /* --- UTILITARIOS --- */
+        .hidden { display: none !important; }
+        
+        .progress-bar {
+            height: 4px;
+            background: #eee;
+            width: 100%;
+            position: fixed;
+            top: var(--toolbar-height);
+            left: 0;
+            z-index: 1000;
+        }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+
+        #export-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            #app-shell { grid-template-columns: 1fr; }
+            aside { display: none; }
+            header { padding: 0 1rem; }
+        }
+    </style>
+</head>
+<body>
+<!-- TELA DE SETUP -->
+<div id="setup-screen">
+<div class="modal">
+<h2>EbookForge Unlimited</h2>
+<p style="margin-bottom: 1rem; font-size: 0.9rem; color: #666;">Crie seu próximo manuscrito digital.</p>
+<div class="form-group">
+<label>Título do Projeto</label>
+<input id="project-title" placeholder="Ex: O Silêncio da Floresta" type="text"/>
+</div>
+<div class="form-group">
+<label>Tipo de Ebook</label>
+<select id="project-type">
+<option value="traditional">Ebook Tradicional</option>
+<option value="illustrated">Ebook Ilustrado</option>
+<option value="playbook">Playbook (Guia Prático)</option>
+<option value="atlas">Atlas (Imagens + Info)</option>
+<option value="encyclopedia">Enciclopédia</option>
+</select>
+</div>
+<div class="form-group">
+<label>Páginas Estimadas (Máx 3000)</label>
+<input id="project-pages" max="3000" min="1" type="number" value="10"/>
+</div>
+<button class="btn btn-primary" onclick="initProject()">Criar Projeto</button>
+<button class="btn" onclick="loadProject()" style="margin-top: 10px; width: 100%;">Carregar Último Salvo</button>
+</div>
+</div>
+<!-- APP PRINCIPAL -->
+<div class="hidden" id="app-shell">
+<header>
+<div class="logo">
+<span class="material-icons">auto_stories</span>
+                EbookForge
+            </div>
+<div style="display: flex; gap: 1rem; align-items: center;">
+<span id="word-count" style="font-size: 0.8rem; color: #666;">Palavras: 0</span>
+<button class="tool-btn" onclick="toggleTheme()"><span class="material-icons">dark_mode</span></button>
+<button class="btn btn-primary" onclick="exportPDF()" style="padding: 8px 16px; font-size: 0.8rem;">Exportar PDF</button>
+<button class="btn" onclick="resetProject()" style="padding: 8px 16px; font-size: 0.8rem; background: #eee;">Novo</button>
+</div>
+</header>
+<div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+<aside id="sidebar-pages">
+<!-- Páginas renderizadas aqui -->
+</aside>
+<main>
+<div class="editor-toolbar">
+<button class="tool-btn" onclick="format('bold')"><span class="material-icons">format_bold</span></button>
+<button class="tool-btn" onclick="format('italic')"><span class="material-icons">format_italic</span></button>
+<button class="tool-btn" onclick="format('insertUnorderedList')"><span class="material-icons">format_list_bulleted</span></button>
+<button class="tool-btn" onclick="insertImage()"><span class="material-icons">image</span></button>
+<div style="border-left: 1px solid #ddd; margin: 0 10px;"></div>
+<button class="tool-btn" onclick="prevPage()"><span class="material-icons">chevron_left</span></button>
+<span id="page-indicator" style="align-self: center; font-size: 0.9rem; font-weight: bold;">Página 1</span>
+<button class="tool-btn" onclick="nextPage()"><span class="material-icons">chevron_right</span></button>
+</div>
+<div id="editor-container">
+<div class="rich-editor" contenteditable="true" id="editor" oninput="saveCurrentPage()">
+                    Comece a escrever sua história aqui...
+                </div>
+</div>
+</main>
+</div>
+<!-- MODAL DE EXPORTAÇÃO -->
+<div class="hidden" id="export-modal">
+<div style="text-align: center;">
+<div class="material-icons" style="font-size: 4rem; animation: spin 2s linear infinite;">sync</div>
+<h2 style="margin-top: 1rem;">Gerando seu PDF Profissional...</h2>
+<p>Isso pode levar alguns segundos dependendo do número de páginas.</p>
+</div>
+</div>
+<!-- INPUT DE IMAGEM OCULTO -->
+<input accept="image/*" class="hidden" id="image-input" onchange="handleImageUpload(event)" type="file"/>
+<script>
+        // ESTADO GLOBAL
+        let appState = {
+            title: "",
+            type: "traditional",
+            pages: [],
+            currentPage: 0,
+            isDarkMode: false
+        };
+
+        const editor = document.getElementById('editor');
+        const sidebar = document.getElementById('sidebar-pages');
+        const setupScreen = document.getElementById('setup-screen');
+        const appShell = document.getElementById('app-shell');
+
+        // INICIALIZAÇÃO
+        function initProject() {
+            appState.title = document.getElementById('project-title').value || "Novo Ebook";
+            appState.type = document.getElementById('project-type').value;
+            const pageCount = Math.min(parseInt(document.getElementById('project-pages').value) || 1, 3000);
+            
+            appState.pages = Array(pageCount).fill("").map((_, i) => {
+                if (appState.type === 'playbook') return `<h2>Passo ${i+1}:</h2><p>Descreva o procedimento aqui...</p>`;
+                if (appState.type === 'atlas') return `<div style="text-align:center; padding: 20px; border: 2px dashed #ccc; margin-bottom: 20px;">Espaço para Imagem</div><p>Descrição técnica do item...</p>`;
+                return "";
+            });
+
+            setupScreen.classList.add('hidden');
+            appShell.classList.remove('hidden');
+            renderSidebar();
+            loadPage(0);
+        }
+
+        // RENDERIZAÇÃO
+        function renderSidebar() {
+            sidebar.innerHTML = "";
+            appState.pages.forEach((page, index) => {
+                const div = document.createElement('div');
+                div.className = `page-item ${index === appState.currentPage ? 'active' : ''}`;
+                div.innerHTML = `<span class="material-icons">description</span> Página ${index + 1}`;
+                div.onclick = () => loadPage(index);
+                sidebar.appendChild(div);
+            });
+            updateProgress();
+        }
+
+        function loadPage(index) {
+            saveCurrentPage();
+            appState.currentPage = index;
+            editor.innerHTML = appState.pages[index] || "Comece a escrever sua história aqui...";
+            document.getElementById('page-indicator').innerText = `Página ${index + 1}`;
+            renderSidebar();
+            updateWordCount();
+            
+            // Scroll para cima suave
+            document.querySelector('main').scrollTop = 0;
+        }
+
+        function saveCurrentPage() {
+            appState.pages[appState.currentPage] = editor.innerHTML;
+            localStorage.setItem('ebookforge_data', JSON.stringify(appState));
+            updateWordCount();
+        }
+
+        function loadProject() {
+            const saved = localStorage.getItem('ebookforge_data');
+            if (saved) {
+                appState = JSON.parse(saved);
+                setupScreen.classList.add('hidden');
+                appShell.classList.remove('hidden');
+                renderSidebar();
+                loadPage(appState.currentPage);
+                if (appState.isDarkMode) {
+                    document.body.classList.add('dark-mode');
+                }
+            } else {
+                alert("Nenhum projeto salvo encontrado.");
+            }
+        }
+
+        function resetProject() {
+            if(confirm("Deseja criar um novo projeto? Isso apagará o progresso não exportado.")) {
+                localStorage.removeItem('ebookforge_data');
+                location.reload();
+            }
+        }
+
+        // NAVEGAÇÃO
+        function nextPage() { if (appState.currentPage < appState.pages.length - 1) loadPage(appState.currentPage + 1); }
+        function prevPage() { if (appState.currentPage > 0) loadPage(appState.currentPage - 1); }
+
+        // FORMATAÇÃO
+        function format(cmd) { document.execCommand(cmd, false, null); editor.focus(); }
+
+        function insertImage() { document.getElementById('image-input').click(); }
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = `<img src="${event.target.result}" style="max-width: 100%; border-radius: 8px; margin: 20px 0;">`;
+                    document.execCommand('insertHTML', false, img);
+                    saveCurrentPage();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // PDF EXPORT (A mágica acontece aqui)
+        async function exportPDF() {
+            const modal = document.getElementById('export-modal');
+            modal.classList.remove('hidden');
+            saveCurrentPage();
+
+            // Container temporário para renderizar todas as páginas
+            const container = document.createElement('div');
+            container.style.width = "800px";
+            container.style.padding = "0";
+
+            appState.pages.forEach((content, i) => {
+                const pageDiv = document.createElement('div');
+                pageDiv.style.height = "1120px"; // Altura A4 aproximada
+                pageDiv.style.padding = "60px";
+                pageDiv.style.backgroundColor = "white";
+                pageDiv.style.color = "black";
+                pageDiv.style.fontFamily = "'Newsreader', serif";
+                pageDiv.style.fontSize = "14pt";
+                pageDiv.style.pageBreakAfter = "always";
+                pageDiv.style.position = "relative";
+                pageDiv.innerHTML = content;
+
+                // Rodapé com número de página
+                const footer = `<div style="position:absolute; bottom:30px; left:0; right:0; text-align:center; font-size: 10pt; color: #999;">${appState.title} - Página ${i+1}</div>`;
+                pageDiv.innerHTML += footer;
+
+                container.appendChild(pageDiv);
+            });
+
+            const opt = {
+                margin:       0,
+                filename:     `${appState.title.replace(/\s+/g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'px', format: [800, 1120], orientation: 'portrait' }
+            };
+
+            try {
+                await html2pdf().from(container).set(opt).save();
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao exportar PDF.");
+            } finally {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // UTILITÁRIOS
+        function toggleTheme() {
+            appState.isDarkMode = !appState.isDarkMode;
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('ebookforge_data', JSON.stringify(appState));
+        }
+
+        function updateWordCount() {
+            const text = editor.innerText || "";
+            const words = text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length;
+            document.getElementById('word-count').innerText = `Palavras: ${words}`;
+        }
+
+        function updateProgress() {
+            const filled = appState.pages.filter(p => p.length > 50).length;
+            const percent = (filled / appState.pages.length) * 100;
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+        }
+
+        // Atalhos de teclado
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 's') { e.preventDefault(); saveCurrentPage(); alert("Salvo!"); }
+                if (e.key === 'b') { e.preventDefault(); format('bold'); }
+                if (e.key === 'i') { e.preventDefault(); format('italic'); }
+            }
+        });
+
+    </script>
+<style>
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</body></html>
